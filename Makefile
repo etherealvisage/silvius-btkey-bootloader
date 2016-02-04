@@ -4,7 +4,7 @@ CC="${PREFIX}gcc"
 LD="${PREFIX}ld"
 OBJCOPY="${PREFIX}objcopy"
 
-bootloader.srec: bootloader.elf
+bootloader.srec: bootloader.elf Makefile
 	${OBJCOPY} bootloader.elf -O srec bootloader.srec
 
 bootloader.elf: init.o main.o linker.ld
@@ -13,7 +13,7 @@ bootloader.elf: init.o main.o linker.ld
 init.o: init.s
 	${AS} -mips32r2 -EL init.s -o init.o
 
-main.o: main.c
+main.o: main.c pic.h
 	${CC} -Os -msoft-float -EL -march=m4k -nostdlib -c main.c
 
 .PHONY: clean
