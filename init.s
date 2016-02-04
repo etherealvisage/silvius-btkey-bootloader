@@ -1,10 +1,22 @@
 .section .reset
 .global _start
 
-_start:
-	/* is this a watchdog timer reset? */
-	/* TODO: handle */
+.extern nmi_handler
 
+_start:
+	/* is this a NMI (i.e. watchdog timer reset)? */
+	/* grab NMI bit from the Status register */
+	mfc0	$k0, $12
+	ext	$k0, $k0, 19, 1
+	beqz	$k0, .no_nmi
+	nop
+
+	la	$k0, nmi_handler
+	jr 	$k0
+	nop
+	
+	
+.no_nmi:
 	/* it's a proper reset. */
 	/* begin setup by initializing RAM */
 	jal	initialize_ram
@@ -16,7 +28,6 @@ _start:
 .loop_forever:
 	j	.loop_forever
 	nop
-
 
 initialize_ram:
 .extern _gp

@@ -10,34 +10,45 @@ RESET_ADDR = 0xbfc00000;
 
 MEMORY {
     kseg0_program           : ORIGIN = 0x9d000000, LENGTH = FLASH_SIZE
-    kseg0_boot_mem          : ORIGIN = 0x9fc00000, LENGTH = 0xbf0
-    config_mem              : ORIGIN = 0x9fc00bf0, LENGTH = 0x10
+    kseg0_init_mem          : ORIGIN = 0x9fc00000, LENGTH = 0x100
+    kseg0_boot_mem          : ORIGIN = 0x9fc00100, LENGTH = 0xaf0
     kseg0_mem               : ORIGIN = 0x80000000, LENGTH = RAM_SIZE
 
     kseg1_program           : ORIGIN = 0xbd000000, LENGTH = FLASH_SIZE
-    kseg1_boot_mem          : ORIGIN = 0xbfc00000, LENGTH = 0xbf0
+    kseg1_init_mem          : ORIGIN = 0xbfc00000, LENGTH = 0x100
+    kseg1_boot_mem          : ORIGIN = 0xbfc00000, LENGTH = 0xaf0
     kseg1_mem               : ORIGIN = 0xa0000000, LENGTH = RAM_SIZE
+    config_mem              : ORIGIN = 0xbfc00bf0, LENGTH = 0x10
 
     sfrs                    : ORIGIN = 0xbf800000, LENGTH = 0x100000
 }
 
-SECTIONS {
-    /* Initialization code */
-    .reset RESET_ADDR : {
-        KEEP(*(.reset))
-        KEEP(*(.reset.rodata))
-    } > kseg1_boot_mem
+PHDRS {
+    code_header PT_LOAD;
+    cfg_header PT_LOAD;
+}
 
+SECTIONS {
     /* Main code */
-    .text : {
+    .code RESET_ADDR : {
+        *(.reset)
         *(.text)
         *(.rodata)
-    } > kseg1_boot_mem
+    } > kseg1_boot_mem :code_header
 
     /* Configuration registers */
-    .devconfig : {
-        KEEP (*.devconfig)
-    } > config_mem
+    .devcfg3 0xbfc00bf0 : {
+        KEEP (*.devcfg3)
+    } > config_mem :cfg_header
+    .devcfg2 0xbfc00bf4 : {
+        KEEP (*.devcfg2)
+    } > config_mem :cfg_header
+    .devcfg1 0xbfc00bf8 : {
+        KEEP (*.devcfg1)
+    } > config_mem :cfg_header
+    .devcfg0 0xbfc00bfc : {
+        KEEP (*.devcfg0)
+    } > config_mem :cfg_header
 
     .data_begin : {
         data_flash_begin = .;

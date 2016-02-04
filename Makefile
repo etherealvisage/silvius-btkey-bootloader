@@ -11,10 +11,10 @@ bootloader.elf: init.o main.o linker.ld
 	${LD} -nostdlib init.o main.o -o bootloader.elf -T linker.ld
 
 init.o: init.s
-	${AS} -EL init.s -o init.o
+	${AS} -mips32r2 -EL init.s -o init.o
 
 main.o: main.c
-	${CC} -msoft-float -EL -march=m4k -nostdlib -c main.c
+	${CC} -Os -msoft-float -EL -march=m4k -nostdlib -c main.c
 
 .PHONY: clean
 clean:
