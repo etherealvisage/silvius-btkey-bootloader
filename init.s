@@ -1,32 +1,36 @@
 .section .reset
 .global _start
 
-.extern nmi_handler
-
 _start:
-	/* is this a NMI (i.e. watchdog timer reset)? */
-	/* grab NMI bit from the Status register */
-	mfc0	$k0, $12
-	ext	$k0, $k0, 19, 1
-	beqz	$k0, .no_nmi
+	/* check if this was caused by a power-on or hardware reset... */
+	la	$k0, 0xbf80f600 /* RCON register */
+	lw	$k1, 0($k0)
+	and	$k1, $k1, 0x83
+	beqz	$k1, .use_target_code /* if $k1 = 0, some other reset caused this. */
 	nop
 
-	la	$k0, nmi_handler
-	jr 	$k0
-	nop
-	
-	
-.no_nmi:
-	/* it's a proper reset. */
-	/* begin setup by initializing RAM */
+	/* OK, power-on. Use bootloader code. */
+.use_bootloader:
 	jal	initialize_ram
-
-	/* continue by jumping into target code */
 .extern entry
 	jal	entry
 
+	/* if entry returns, just busy-wait forever... */
 .loop_forever:
 	j	.loop_forever
+	nop
+
+.use_target_code:
+	/* let's ensure first that there is a valid target */
+	li	$k0, 0xbd000000
+	lw	$k0, 0($k0)
+	li	$k1, 0xffffffff
+	beq	$k0, $k1, .use_bootloader /* if invalid, use the bootloader */
+	nop
+
+	/* otherwise, jump to target code. */
+	li	$k0, 0xbd000000
+	jr	$k0
 	nop
 
 initialize_ram:
@@ -75,3 +79,4 @@ initialize_ram:
 .copy_loop_end:
 
 	jr 	$ra
+	nop

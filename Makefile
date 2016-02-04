@@ -17,7 +17,7 @@ init.o: init.s
 	${AS} -mips32r2 -EL init.s -o init.o
 
 main.o: main.c pic.h
-	${CC} -Os -msoft-float -EL -march=m4k -nostdlib -c main.c
+	${CC} -O1 -msoft-float -EL -march=m4k -nostdlib -c main.c
 
 .PHONY: clean
 clean:

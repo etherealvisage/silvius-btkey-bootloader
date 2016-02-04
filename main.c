@@ -6,6 +6,7 @@
 
 const uint32_t __attribute__((section (".devcfg0"))) devcfg0 = 0xffffffff;
 const uint32_t __attribute__((section (".devcfg1"))) devcfg1 = 0xff7f3fff;
+//const uint32_t __attribute__((section (".devcfg1"))) devcfg1 = 0xff6b3fff;
 const uint32_t __attribute__((section (".devcfg2"))) devcfg2 = 0xfffffff9;
 const uint32_t __attribute__((section (".devcfg3"))) devcfg3 = 0xffffffff;
 
@@ -40,6 +41,12 @@ uint32_t parse32(const char *p) {
     return ret;
 }
 
+void format8(char *p, uint8_t v) {
+    const char *hex = "0123456789abcdef";
+    p[0] = hex[v >> 4];
+    p[1] = hex[v & 0xf];
+}
+
 void format32(char *p, uint32_t v) {
     const char *hex = "0123456789abcdef";
     int i;
@@ -72,7 +79,26 @@ void perform_flash_op(uint8_t op) {
     asm volatile("ei");
 }
 
+void software_reset() {
+    SYSKEY = 0x0; // write invalid key to force lock
+    SYSKEY = 0xAA996655; // Write Key1 to SYSKEY
+    SYSKEY = 0x556699AA; // Write Key2 to SYSKEY
+
+    RSWRSTSET = 1;
+
+    volatile uint32_t *p = &RSWRST;
+    unsigned int x = *p;
+
+    while(1) {
+        __asm__ __volatile__("nop" : : "r"(x));
+    }
+}
+
 void entry() {
+    uint32_t rcon_value = RCON;
+    /* clear relevant bits in RCON */
+    RCONCLR = 0x83;
+
     asm volatile("di");
     // unlock OSCCON
     SYSKEY = 0x0; // write invalid key to force lock
@@ -101,9 +127,9 @@ void entry() {
     OSCCON |= 1; // enable switch
 
     while(OSCCON & 1) ;
-    
+
     SYSKEY = 0x0; // write invalid key to force lock
-    
+
     asm volatile("ei");
 
     // start by marking all three as digital pins
@@ -134,6 +160,7 @@ void entry() {
         BUFFER_READ_STATE,
         BUFFER_WRITE_STATE,
         READ_STATE,
+        READ_BYTE_STATE,
         WRITE_WORD_STATE,
         WRITE_ROW_STATE,
         ERASE_PAGE_STATE,
@@ -145,9 +172,29 @@ void entry() {
     
     enum STATE_TYPE after_state;
     
-    // set up interrupts
+    // disable intererupts
     __asm__ volatile("di");
 
+    format32(buffer, rcon_value);
+    send(buffer[0]);
+    send(buffer[1]);
+    send(buffer[2]);
+    send(buffer[3]);
+    send(buffer[4]);
+    send(buffer[5]);
+    send(buffer[6]);
+    send(buffer[7]);
+
+    /* send initial query */
+    send('>');
+    /* wait for initial message */
+    int i;
+    for(i = 4000000; i > 0; i --) {
+        if((U1STA & 1) != 0) break;
+    }
+
+    /* did we time out? if so, reset and go into target code if possible. */
+    if(i == 0) software_reset();
 
     while(1) {
         switch(STATE) {
@@ -165,6 +212,12 @@ void entry() {
                     buffer_length = 8;
                     STATE = BUFFER_READ_STATE;
                     after_state = READ_STATE;
+                }
+                else if(cmd == 'y') {
+                    buffer_offset = 0;
+                    buffer_length = 8;
+                    STATE = BUFFER_READ_STATE;
+                    after_state = READ_BYTE_STATE;
                 }
                 else if(cmd == 'w') {
                     buffer_offset = 0;
@@ -185,8 +238,7 @@ void entry() {
                     after_state = ERASE_PAGE_STATE;
                 }
                 else if(cmd == 'b') {
-                    void (*fptr)(void) = (void (*)(void))(0xbd000000);
-                    fptr();
+                    software_reset();
                 }
                 else if(cmd == 'p') {
                     buffer_offset = 0;
@@ -198,6 +250,7 @@ void entry() {
                     send('!');
                     STATE = INITIAL_STATE;
                 }
+
                 break;
             }
             case BUFFER_READ_STATE: {
@@ -222,6 +275,15 @@ void entry() {
                 after_state = INITIAL_STATE;
                 buffer_offset = 0;
                 buffer_length = 8;
+                STATE = BUFFER_WRITE_STATE;
+                break;
+            }
+            case READ_BYTE_STATE: {
+                uint32_t address = parse32(buffer);
+                format8(buffer, *(uint8_t *)address);
+                after_state = INITIAL_STATE;
+                buffer_offset = 0;
+                buffer_length = 2;
                 STATE = BUFFER_WRITE_STATE;
                 break;
             }

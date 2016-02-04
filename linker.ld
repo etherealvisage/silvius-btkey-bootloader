@@ -35,6 +35,7 @@ SECTIONS {
         *(.reset)
         *(.text)
         *(.rodata)
+        *(.rodata.*)
     } > kseg1_boot_mem :code_header
 
     /* Configuration registers */
@@ -61,7 +62,7 @@ SECTIONS {
         *(.data)
         *(.sdata)
         data_ram_end = .;
-    } > kseg1_mem AT >kseg1_boot_mem
+    } > kseg1_mem AT >kseg1_boot_mem :code_header
 
     .data_end : {
         data_flash_end = .;
