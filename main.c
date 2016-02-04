@@ -1,7 +1,8 @@
 #include <stdlib.h>
 #include <stdint.h>
 
-#include "pic.h"
+//#include "pic.h"
+#include "p32mx250f128b.h"
 
 const uint32_t __attribute__((section (".devcfg0"))) devcfg0 = 0xffffffff;
 const uint32_t __attribute__((section (".devcfg1"))) devcfg1 = 0xff7f3fff;
@@ -116,7 +117,7 @@ void entry() {
     U1RXR = 0b0011; // RPB13 to U1RX
     RPB15R = 0b0001; // RPB15 to U1TX
     // Initialize U1
-    // Set baud rate to 19200 baud
+    // Set baud rate to 38400 baud
     U1BRG = 38;
     // Set U1MODE to enable (15), (simplex mode 11)
     U1MODE = (1<<11);

@@ -1,1 +1,4 @@
 *.swp
+*.o
+bootloader.elf
+bootloader.srec
