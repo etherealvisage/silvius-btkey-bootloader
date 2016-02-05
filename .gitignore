@@ -1,4 +1,5 @@
 *.swp
 *.o
-bootloader.elf
-bootloader.srec
+/bootloader.elf
+/bootloader.srec
+/transfer
