@@ -175,16 +175,6 @@ void entry() {
     // disable intererupts
     __asm__ volatile("di");
 
-    format32(buffer, rcon_value);
-    send(buffer[0]);
-    send(buffer[1]);
-    send(buffer[2]);
-    send(buffer[3]);
-    send(buffer[4]);
-    send(buffer[5]);
-    send(buffer[6]);
-    send(buffer[7]);
-
     /* send initial query */
     send('>');
     /* wait for initial message */
