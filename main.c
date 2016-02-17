@@ -15,13 +15,13 @@ void idle() {
 }
 
 void send(uint8_t c) {
-    while((U1STA & (1<<9)) != 0) idle();
-    U1TXREG = c;
+    while((U2STA & (1<<9)) != 0) idle();
+    U2TXREG = c;
 }
 
 uint8_t recv() {
-    while((U1STA & 1) == 0) idle();
-    return U1RXREG;
+    while((U2STA & 1) == 0) idle();
+    return U2RXREG;
 }
 
 uint8_t parse4(char c) {
@@ -132,9 +132,10 @@ void entry() {
 
     asm volatile("ei");
 
+#if 0
     // start by marking all three as digital pins
     ANSELACLR = 1;
-    ANSELBCLR = (1<<13) | (1<<15);
+    //ANSELBCLR = (1<<13) | (1<<15);
     // mark U1RX (RB13) as input
     TRISBSET = (1<<13);
     // mark U1TX (RB15) as output
@@ -151,7 +152,31 @@ void entry() {
     
     // Enable transmission (10) and receiving (12)
     U1STA = (1<<12) | (1<<10);
+#endif
+    // U2 setup
+    ANSELACLR = 1<<1;
+    ANSELBCLR = 1<<0;
 
+    // mark U2RX (RA1) as input
+    TRISASET = (1<<1);
+    // mark U2TX (RB0) as output
+    TRISBCLR = (1<<0);
+    // set up PPS for U1
+    U2RXR = 0b0000;
+    RPB0R = 0b0010;
+    // Initialize U2
+    // Set baud rate to 38400 baud
+    U2BRG = 38;
+    // Set U2MODE to enable, simplex
+    U2MODEbits.RTSMD = 1; // simplex
+    U2MODEbits.ON = 1;
+
+    // Enable transmission and receiving
+    U2STAbits.URXEN = 1;
+    U2STAbits.UTXEN = 1;
+
+    // LED setup
+    ANSELACLR = 1;
     TRISACLR = 1;
 
     enum STATE_TYPE {
@@ -180,7 +205,7 @@ void entry() {
     /* wait for initial message */
     int i;
     for(i = 4000000; i > 0; i --) {
-        if((U1STA & 1) != 0) break;
+        if((U2STA & 1) != 0) break;
     }
 
     /* did we time out? if so, reset and go into target code if possible. */
