@@ -5,9 +5,8 @@
 #include "p32mx250f128b.h"
 
 const uint32_t __attribute__((section (".devcfg0"))) devcfg0 = 0xffffffff;
-const uint32_t __attribute__((section (".devcfg1"))) devcfg1 = 0xff7f3fff;
-//const uint32_t __attribute__((section (".devcfg1"))) devcfg1 = 0xff6b3fff;
-const uint32_t __attribute__((section (".devcfg2"))) devcfg2 = 0xfffffff9;
+const uint32_t __attribute__((section (".devcfg1"))) devcfg1 = 0xff7f3eff;
+const uint32_t __attribute__((section (".devcfg2"))) devcfg2 = 0xffff7dfd;
 const uint32_t __attribute__((section (".devcfg3"))) devcfg3 = 0xffffffff;
 
 void idle() {
@@ -109,17 +108,11 @@ void entry() {
 
     // clear NOSC
     con &= ~(7 << 8);
-    // set NOSC: internal RC with PLL
-    con |= (1 << 8);
-    // set PLLMULT: 24x multiplier of 4MHz input = 96MHz
-    con |= (7 << 16);
-    // clear PLLODIV
-    con &= ~(7 << 27);
-    // set PLLODIV: divide 96MHz by 2 = 48MHz
-    con |= (1 << 27);
+    // set NOSC: internal RC, no PLL, no divider
+    con |= (0 << 8);
     // clear PBDIV
     con &= ~(3 << 19);
-    // set PBDIV: divide 48MHz by 2 for 24MHz peripheral clock
+    // set PBDIV: divide 8MHz by 2 for 4MHz peripheral clock
     con |= (1 << 19);
 
     OSCCON = con;
@@ -165,8 +158,8 @@ void entry() {
     U2RXR = 0b0000;
     RPB0R = 0b0010;
     // Initialize U2
-    // Set baud rate to 38400 baud
-    U2BRG = 38;
+    // Set baud rate to 19200 baud
+    U2BRG = 12;
     // Set U2MODE to enable, simplex
     U2MODEbits.RTSMD = 1; // simplex
     U2MODEbits.ON = 1;
@@ -204,7 +197,7 @@ void entry() {
     send('>');
     /* wait for initial message */
     int i;
-    for(i = 4000000; i > 0; i --) {
+    for(i = 2000000; i > 0; i --) {
         if((U2STA & 1) != 0) break;
     }
 
